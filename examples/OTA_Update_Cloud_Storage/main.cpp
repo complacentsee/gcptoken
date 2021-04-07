@@ -14,6 +14,7 @@
  *****************************************************************************/
 
 #include <Arduino.h>
+#include <WiFi.h>
 #include "gcptoken.h"
 #include <WiFiClientSecure.h>
 #include "Update.h"
@@ -127,19 +128,17 @@ const char *root_gcp_cert =
 
 // Forward declarations for misc helper functions
 void setupWifi();
-void execOTA();
+void execOTA(String token);
 String getHeaderValue(String header, String headerName);
 
-// Misc Files 
-long contentLength = 0;
-bool isValidContentType = false;
-
-
-
 void setup() {
-  void setupWifi();
+  Serial.begin(115200);
+  setupWifi();
+  delay(10);
   serviceacc = gcptoken(service_kid,service_aud,service_account,service_private_key_str);
-  String token = serviceacc.getServiceToken(time(nullptr));
+  String token = serviceacc.getScopedToken(scope,time(nullptr));
+  Serial.println(token);
+  execOTA(token);
 }
 
 void loop() {
@@ -150,7 +149,10 @@ void loop() {
 // This OTA updated code  was lifted from another project based on AWS and 
 // reused here for use with GCP. I was unable to locate the original 
 // version of this code to credit.
-void execOTA() {
+void execOTA(String token) {
+  long contentLength = 0;
+  bool isValidContentType = false;
+
   Serial.println("Connecting to: " + String(host));
   WiFiClientSecure client;
   if (client.connect(host.c_str(), port)) {
@@ -163,7 +165,7 @@ void execOTA() {
     client.print(String("GET ") + bin + " HTTP/1.1\r\n" +
                  "Host: " + host + "\r\n" +
                  "Cache-Control: no-cache\r\n" +
-                 "Authorization: Bearer " + serviceacc.getScopedToken(scope,time(nullptr)) + "\r\n" +
+                 "Authorization: Bearer " + token + "\r\n" +
                  "Connection: close\r\n\r\n");
 
     unsigned long timeout = millis();

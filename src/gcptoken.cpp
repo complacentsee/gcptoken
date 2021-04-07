@@ -227,7 +227,7 @@ long long int gcptoken::getScopedJwtExpSecs() {
   return _scoped_jwt_exp_secs;
 }
 
-String gcptoken::requestToken(String JWT){
+String gcptoken::requestToken(String JWT, const char * tokenid){
   WiFiClientSecure client;
   String ret;
   int status = 0;
@@ -249,12 +249,12 @@ String gcptoken::requestToken(String JWT){
             // file found at server
             if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
               String payload = https.getString();
-              Serial.println(payload);
+              Serial.println(payload);  //Uncomment this line if you would like to print the token. 
               StaticJsonDocument<1024> http_payload;
               Serial.println("Starting HTTP deserializeJson");
               deserializeJson(http_payload, payload);
-              if(http_payload.containsKey("id_token")){
-                ret = ret + http_payload["id_token"].as<String>();
+              if(http_payload.containsKey(tokenid)){
+                ret = ret + http_payload[tokenid].as<String>();
                 Serial.println("Completed deserializeJson");
                 status = 0;
               }
@@ -274,14 +274,14 @@ String gcptoken::requestToken(String JWT){
 }
 
 String gcptoken::requestServiceToken(){
-  _servicetoken = requestToken(_serviceJWT);
+  _servicetoken = requestToken(_serviceJWT,_servicetokenid);
   _service_token_exp_secs = _service_jwt_exp_secs;
   _service_exp_millis = millis() + _service_token_life * 1000;
   return _servicetoken;
 }
 
 String gcptoken::requestScopedToken(){
-  _scopedToken = requestToken(_scopedJWT);
+  _scopedToken = requestToken(_scopedJWT,_scopetokenid);
   _scoped_token_exp_secs = _scoped_jwt_exp_secs;
   _scoped_exp_millis = millis() + _scoped_token_life * 1000;
   return _scopedToken;

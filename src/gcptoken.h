@@ -22,6 +22,8 @@ class gcptoken {
     const char *_audience = "https://oauth2.googleapis.com/token";
     const char *_service_account;
     const char *_service_private_key_str;
+    const char *_servicetokenid = "id_token";
+    const char *_scopetokenid = "access_token";
 
     //Service Token Private Variables
     String _serviceJWT;
@@ -137,7 +139,7 @@ class gcptoken {
   String createScopedJWT(String scope, long long int time);                           //DONE
   String createScopedJWT(String scope, long long int time, int jwtlife);              //DONE
 
-  String requestToken(String JWT);                                                    //DONE
+  String requestToken(String JWT, const char * tokenid);                                                    //DONE
   String requestServiceToken();                                                       //DONE
   String requestScopedToken();                                                        //DONE
 

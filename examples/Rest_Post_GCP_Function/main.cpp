@@ -14,6 +14,7 @@
  *****************************************************************************/
 
 #include <Arduino.h>
+#include <WiFi.h>
 #include "gcptoken.h"
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
@@ -133,7 +134,9 @@ void setupWifi();
 String postcontent = "{\"key1\":99}";
 
 void setup() {
-  void setupWifi();
+  Serial.begin(115200);
+  setupWifi();
+  delay(10);
   serviceacc = gcptoken(service_kid,service_aud,service_account,service_private_key_str);
   String token = serviceacc.getServiceToken(time(nullptr));
   RESTPost(postcontent,token);
@@ -185,7 +188,7 @@ void setupWifi() {
   Serial.println("Starting wifi");
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  Serial.println("Connecting to WiFi");
+  Serial.print("Connecting to WiFi");
   int wifi_connection_timer = millis();
   while (WiFi.status() != WL_CONNECTED){
     delay(100);
