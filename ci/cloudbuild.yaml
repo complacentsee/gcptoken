@@ -1,0 +1,9 @@
+steps:
+- name: 'suculent/platformio-docker-build'
+  dir: '/opt/workspace'
+  entrypoint: 'bash'
+  args: ['/workspace/ci/update.sh']
+artifacts: 
+  objects: 
+    location: 'gs://gcptoken-test-firmware/'
+    paths: ['/workspace/firmware.bin']     

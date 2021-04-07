@@ -17,7 +17,6 @@
 #include "mbedtls/rsa.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/md.h"
-#include "mbedtls/Sha256.h"
 #include "gcptoken.h"
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>

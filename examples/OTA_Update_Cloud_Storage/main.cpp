@@ -280,7 +280,6 @@ void setupWifi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   Serial.println("Connecting to WiFi");
-  int wifi_connection_timer = millis();
   while (WiFi.status() != WL_CONNECTED){
     delay(100);
     Serial.println(".");

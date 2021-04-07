@@ -1,0 +1,3 @@
+# Builder Selection and Options
+platformio:
+  environment: OTA_Update_Cloud_Storage
