@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../"
+		},
+		{
+			"name": "gcptoken",
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"system_error": "cpp"
+		}
+	}
+}
