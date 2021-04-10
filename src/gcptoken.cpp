@@ -249,7 +249,7 @@ String gcptoken::requestToken(String JWT, const char * tokenid){
             if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
               String payload = https.getString();
               Serial.println(payload);  //Uncomment this line if you would like to print the token. 
-              StaticJsonDocument<1024> http_payload;
+              DynamicJsonDocument http_payload(https.getSize()+floor(0.1*https.getSize()));
               Serial.println("Starting HTTP deserializeJson");
               deserializeJson(http_payload, payload);
               if(http_payload.containsKey(tokenid)){
