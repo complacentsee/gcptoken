@@ -32,6 +32,7 @@ gcptoken serviceacc = gcptoken();
 const char *service_kid = "56d14186258ba5d1b2c12475d6661c6d20d58350";
 const char *service_aud = "32555940559.apps.googleusercontent.com";
 const char *service_account = "github-public@gcptoken.iam.gserviceaccount.com";
+char *token;
 const char *service_private_key_str = 
   "-----BEGIN PRIVATE KEY-----\n"
   "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC3+f2lytr27UW2\n"
@@ -126,7 +127,7 @@ const char *root_gcp_cert =
     "-----END CERTIFICATE-----\n";
 
 // Forward declarations for misc helper functions
-void RESTPost(String msg, String BearerToken);
+void RESTPost(String msg, char * BearerToken);
 void setupWifi();
 
 // Content to post, in general this will be a dynamicaly created JSON
@@ -137,19 +138,23 @@ void setup() {
   Serial.begin(115200);
   setupWifi();
   delay(10);
-  serviceacc = gcptoken(service_kid,service_aud,service_account,service_private_key_str);
-  String token = serviceacc.getServiceToken(time(nullptr));
+  serviceacc = gcptoken(service_kid,service_aud,service_account,service_private_key_str,root_gcp_cert);
+  Serial.println("initialized");
+  token = serviceacc.getServiceToken(time(nullptr));
+  Serial.println(token);
   RESTPost(postcontent,token);
 }
 
 void loop() {
-  delay(1000);
+  delay(10);
+  RESTPost(postcontent,serviceacc.getServiceToken(time(nullptr)));
+  Serial.println(ESP.getFreeHeap());
 }
 
 // helper function to create rest post
 // msg is the json to post
 // BearerToken is a google cloud signed jwt
-void RESTPost(String msg, String BearerToken) {
+void RESTPost(String msg, char * BearerToken) {
   WiFiClientSecure clientREST;
   Serial.println("Connecting to: " + String(RESTHost));
   if (clientREST.connect(RESTHost.c_str(), RESTPort)) {

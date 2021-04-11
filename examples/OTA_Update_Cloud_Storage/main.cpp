@@ -128,15 +128,15 @@ const char *root_gcp_cert =
 
 // Forward declarations for misc helper functions
 void setupWifi();
-void execOTA(String token);
+void execOTA(char * token);
 String getHeaderValue(String header, String headerName);
 
 void setup() {
   Serial.begin(115200);
   setupWifi();
   delay(10);
-  serviceacc = gcptoken(service_kid,service_aud,service_account,service_private_key_str);
-  String token = serviceacc.getScopedToken(scope,time(nullptr));
+  serviceacc = gcptoken(service_kid,service_aud,service_account,service_private_key_str,root_gcp_cert);
+  char * token = serviceacc.getScopedToken(scope,time(nullptr));
   Serial.println(token);
   execOTA(token);
 }
@@ -149,7 +149,7 @@ void loop() {
 // This OTA updated code  was lifted from another project based on AWS and 
 // reused here for use with GCP. I was unable to locate the original 
 // version of this code to credit.
-void execOTA(String token) {
+void execOTA(char * token) {
   long contentLength = 0;
   bool isValidContentType = false;
 

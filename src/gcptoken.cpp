@@ -13,14 +13,13 @@
  * limitations under the License.
  *****************************************************************************/
 
-#include <stdio.h>
 #include "mbedtls/rsa.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/md.h"
 #include "gcptoken.h"
 #include <WiFiClientSecure.h>
-#include <ArduinoJson.h>
 #include <HTTPClient.h>
+#include <ArduinoJson.h>
 
 // copied from Google CloudIoTCore
 // base64_encode copied from https://github.com/ReneNyffenegger/cpp-base64
@@ -81,11 +80,17 @@ String gcptoken::base64_encode(String str) {
 gcptoken::gcptoken() {}
 
 gcptoken::gcptoken(const char *service_kid, const char *target_audience, 
-        const char *service_account, const char *service_private_key_str){
+        const char *service_account, const char *service_private_key_str,
+        const char *ROOTCA){
   setServiceKid(service_kid);
   setTargetAudience(target_audience);
   setServiceAccount(service_account);
   setPrivateKey(service_private_key_str);
+  setROOTCA(ROOTCA);
+  _serviceJWT = (char*)malloc(sizeof(char)*1);
+  _scopedJWT = (char*)malloc(sizeof(char)*1);
+  _servicetoken= (char*)malloc(sizeof(char)*1);
+  _scopedToken= (char*)malloc(sizeof(char)*1);
 }
 
 gcptoken &gcptoken::setServiceKid(const char *service_kid) {
@@ -108,7 +113,12 @@ gcptoken &gcptoken::setPrivateKey(const char *service_private_key_str) {
   return *this;
 }
 
-String gcptoken::createJWT(String scope, long long int time){
+gcptoken &gcptoken::setROOTCA(const char *ROOTCA) {
+  this->_ROOTCA = ROOTCA;
+  return *this;
+}
+
+char * gcptoken::createJWT(String scope, char * buffer){
   mbedtls_pk_context context;
   mbedtls_pk_init(&context);   
 
@@ -154,15 +164,25 @@ String gcptoken::createJWT(String scope, long long int time){
     free(sig);
     mbedtls_pk_free(&context);
 
-  return message + "." + signiture;
+    message = message + "." + signiture;
+    
+    char * more = (char*)realloc(buffer,sizeof(char)*(message.length()+1));
+    if( more == NULL ){
+      free(buffer);
+      buffer = (char*)malloc(sizeof(char)*(message.length()+1));
+    } else {
+      buffer=more;
+      sprintf(buffer, message.c_str());
+    }
+  return buffer;
 }
 
-String gcptoken::createServiceJWT(long long int time){
+char * gcptoken::createServiceJWT(long long int time){
   _serviceJWT = createServiceJWT(time, 3600);
   return _serviceJWT;
 }
 
-String gcptoken::createServiceJWT(long long int time, int jwtlife){
+char * gcptoken::createServiceJWT(long long int time, int jwtlife){
   String payload = String("{")
     + "\"iss\":\"" +              _service_account    + "\""  
     + ",\"sub\":\"" +             _service_account    + "\"" 
@@ -174,16 +194,16 @@ String gcptoken::createServiceJWT(long long int time, int jwtlife){
     
   _service_token_life = jwtlife;
   _service_jwt_exp_secs = time + jwtlife;
-  _serviceJWT = createJWT(payload, time);
+  _serviceJWT=createJWT(payload, _serviceJWT);
   return _serviceJWT;
 }
 
-String gcptoken::createScopedJWT(String scope, long long int time){
+char * gcptoken::createScopedJWT(String scope, long long int time){
   _scopedJWT = createScopedJWT(scope, time, 3600);
   return _scopedJWT;
 }
 
-String gcptoken::createScopedJWT(String scope, long long int time, int jwtlife){
+char * gcptoken::createScopedJWT(String scope, long long int time, int jwtlife){
   String payload = String("{")
     + "\"iss\":\"" +         _service_account     + "\""  
     + ",\"sub\":\"" +        _service_account     + "\"" 
@@ -194,7 +214,7 @@ String gcptoken::createScopedJWT(String scope, long long int time, int jwtlife){
     + "}";
   _scoped_token_life = jwtlife;
   _scoped_jwt_exp_secs = time + jwtlife;
-  _scopedJWT = createJWT(payload, time);
+  _scopedJWT = createJWT(payload, _scopedJWT);;
   return _scopedJWT;
 }
 
@@ -226,14 +246,14 @@ long long int gcptoken::getScopedJwtExpSecs() {
   return _scoped_jwt_exp_secs;
 }
 
-String gcptoken::requestToken(String JWT, const char * tokenid){
+char * gcptoken::requestToken(char * JWT, const char * tokenid, char * buffer){
   WiFiClientSecure client;
   String ret;
   int status = 0;
   Serial.println("Connecting to: " + String(Host));
 
   if (client.connect(Host.c_str(), Port)) {
-    client.setCertificate(_gcpROOTCA);
+    client.setCertificate(_ROOTCA);
     HTTPClient https; 
     String req = String("grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=") + JWT;
       if (https.begin(client, Host, Port, Path, true)) {
@@ -244,17 +264,13 @@ String gcptoken::requestToken(String JWT, const char * tokenid){
           if (httpCode > 0) {
             // HTTP header has been sent and Server response header has been handled
             Serial.printf("[HTTPS] code: %d\n", httpCode);
-
-            // file found at server
             if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
               String payload = https.getString();
-              Serial.println(payload);  //Uncomment this line if you would like to print the token. 
+              //Serial.println(payload);  //Uncomment this line if you would like to print the token. 
               DynamicJsonDocument http_payload(https.getSize()+floor(0.1*https.getSize()));
-              Serial.println("Starting HTTP deserializeJson");
               deserializeJson(http_payload, payload);
               if(http_payload.containsKey(tokenid)){
                 ret = ret + http_payload[tokenid].as<String>();
-                Serial.println("Completed deserializeJson");
                 status = 0;
               }
             }
@@ -269,28 +285,37 @@ String gcptoken::requestToken(String JWT, const char * tokenid){
         }
   }
   client.stop();
-  return ret;
+
+  char * more = (char*)realloc(buffer,sizeof(char)*(ret.length()+1));
+  if( more == NULL ){
+    free(buffer);
+    buffer = (char*)malloc(sizeof(char)*(ret.length()+1));
+  } else {
+    buffer=more;
+    sprintf(buffer, ret.c_str());
+  }
+  return buffer;
 }
 
-String gcptoken::requestServiceToken(){
-  _servicetoken = requestToken(_serviceJWT,_servicetokenid);
+char * gcptoken::requestServiceToken(){
+  _servicetoken = requestToken(_serviceJWT, _servicetokenid, _servicetoken);
   _service_token_exp_secs = _service_jwt_exp_secs;
   _service_exp_millis = millis() + _service_token_life * 1000;
   return _servicetoken;
 }
 
-String gcptoken::requestScopedToken(){
-  _scopedToken = requestToken(_scopedJWT,_scopetokenid);
+char * gcptoken::requestScopedToken(){
+  _scopedToken = requestToken(_scopedJWT, _scopetokenid, _scopedToken);
   _scoped_token_exp_secs = _scoped_jwt_exp_secs;
   _scoped_exp_millis = millis() + _scoped_token_life * 1000;
   return _scopedToken;
 }
 
-String gcptoken::getServiceToken(){
+char * gcptoken::getServiceToken(){
   return _servicetoken;
 } 
 
-String gcptoken::getServiceToken(long long int time){
+char * gcptoken::getServiceToken(long long int time){
   if((millis() >= _service_exp_millis) || (time >= _service_token_exp_secs)){
     createServiceJWT(time);
     requestServiceToken();
@@ -298,15 +323,15 @@ String gcptoken::getServiceToken(long long int time){
   return _servicetoken;
 } 
 
-void gcptoken::setServiceToken(String token){
+void gcptoken::setServiceToken(char * token){
   _servicetoken = token;
 }
 
-String gcptoken::getScopedToken(){
+char * gcptoken::getScopedToken(){
   return _scopedToken;
 } 
 
-String gcptoken::getScopedToken(String scope, long long int time){
+char * gcptoken::getScopedToken(String scope, long long int time){
   if((millis() >= _scoped_exp_millis) || (time >= _scoped_token_exp_secs)){
     createScopedJWT(scope, time);
     requestScopedToken();
@@ -314,6 +339,6 @@ String gcptoken::getScopedToken(String scope, long long int time){
   return _scopedToken;
 } 
 
-void gcptoken::setScopedToken(String token){
+void gcptoken::setScopedToken(char * token){
   _scopedToken = token;
 }
