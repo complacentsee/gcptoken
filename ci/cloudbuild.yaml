@@ -5,5 +5,5 @@ steps:
   args: ['/workspace/ci/update.sh']
 artifacts: 
   objects: 
-    location: 'gs://gcptoken-test-firmware/'
+    location: 'gs://gcptoken-test-firmware/$BRANCH_NAME/'
     paths: ['/workspace/firmware.bin']     
