@@ -43,9 +43,9 @@ class gcptoken {
     long long int _scoped_token_exp_secs = 0;      //DO I ACTUALLY NEED THIS?
     unsigned long _scoped_exp_millis = 0;
 
-    String Host = "oauth2.googleapis.com";                // Host for google OAuth2.0 servers
-    String Path = "/token";                               // OAuth2.0 token API path
-    int Port = 443;                                       // For HTTPS 443.
+    const char * Host = "oauth2.googleapis.com";                // Host for google OAuth2.0 servers
+    const char * Path = "/token";                               // OAuth2.0 token API path
+    int Port = 443;                                             // For HTTPS 443.
 
     //Private functions to handle creating a service JWT. This JWT will be exchanged for a usable token. 
     String base64_encode(const unsigned char *bytes_to_encode,

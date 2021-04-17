@@ -252,7 +252,7 @@ char * gcptoken::requestToken(char * JWT, const char * tokenid, char * buffer){
   int status = 0;
   Serial.println("Connecting to: " + String(Host));
 
-  if (client.connect(Host.c_str(), Port)) {
+  if (client.connect(Host, Port)) {
     client.setCertificate(_ROOTCA);
     HTTPClient https; 
     String req = String("grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=") + JWT;
