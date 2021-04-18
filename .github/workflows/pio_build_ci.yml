@@ -1,5 +1,5 @@
 
-name: PlatformIO CI
+name: PIO Code Check
 
 on: [push]
 

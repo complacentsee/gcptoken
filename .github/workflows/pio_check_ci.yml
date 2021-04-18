@@ -1,4 +1,4 @@
-name: PlatformIO CI
+name: PIO Build
 
 on: [push]
 
